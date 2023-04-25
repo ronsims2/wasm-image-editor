@@ -3,6 +3,7 @@ name = "wasm-image-editor"
 version = "0.1.0"
 authors = ["Ron Sims II <ronsims2@gmail.com>"]
 edition = "2018"
+repository = "https://github.com/ronsims2/wasm-image-editor"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
