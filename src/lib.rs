@@ -31,7 +31,7 @@ pub fn resize_image(image_data: Vec<u8>, resize_factor: f64) -> Vec<u8> {
     let (width, height) = image.dimensions();
     let new_width = (width as f64 * resize_factor) as u32;
     let new_height = (height as f64 * resize_factor) as u32;
-    log(format!("{}::{}", &new_width, &new_height).as_str();
+    log(format!("{}::{}", &new_width, &new_height).as_str());
     let resized_image = image.resize(
         new_width,
         new_height,
