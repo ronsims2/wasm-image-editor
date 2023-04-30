@@ -30,7 +30,7 @@ pub fn resize_image(image_data: Vec<u8>, resize_factor: f64) -> Vec<u8> {
     let (width, height) = image.dimensions();
     let new_width = (width as f64 * resize_factor) as u32;
     let new_height = (height as f64 * resize_factor) as u32;
-    let resized_image = image.resize_to_fill(
+    let resized_image = image.resize(
         new_width,
         new_height,
         imageops::Lanczos3);
