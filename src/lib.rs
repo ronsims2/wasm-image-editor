@@ -34,7 +34,7 @@ pub fn resize_image(image_data: Vec<u8>, resize_factor: f64) -> Vec<u8> {
     let resized_image = image.resize(
         new_width,
         new_height,
-        imageops::Lanczos3);
+        imageops::Nearest);
 
     log(format!("new width: {} | old width: {} | new height: {} | old height: {}", &new_width, &width, &new_height, &height).as_str());
     let (w, h) = &resized_image.dimensions();
