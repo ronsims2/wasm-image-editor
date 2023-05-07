@@ -5,6 +5,7 @@ use image::{GenericImageView, ImageFormat, imageops};
 use image::io::Reader;
 use std::io::Cursor;
 use exif;
+use exif::{Exif, In, Tag};
 
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
 // allocator.
@@ -23,6 +24,24 @@ pub fn greet(text: &str) {
     alert(text);
 }
 
+
+fn get_orientation(exif_data: &Exif) -> i8 {
+    let mut val = -1;
+    match exif_data.get_field(Tag::Orientation, In::PRIMARY) {
+        Some(orientation) => {
+            match orientation.value.get_uint(0) {
+                Some(orientation_val@ 1...8) => {
+                    val = orientation_val as i8;
+                },
+                _ => (),
+            }
+        },
+        None => (),
+    }
+
+    return val.clone()
+}
+
 #[wasm_bindgen]
 pub fn resize_image(image_data: Vec<u8>, resize_factor: f64) -> Vec<u8> {
     // let image = Reader::open(image_url).unwrap().decode().unwrap();
@@ -32,8 +51,11 @@ pub fn resize_image(image_data: Vec<u8>, resize_factor: f64) -> Vec<u8> {
     let exif_data = exif_reader.read_from_container(&mut image_data_buffer).unwrap();
 
     for field in exif_data.fields() {
-        log(&format!("{}: {}", field.tag, field.display_value().with_unit(&exif_data)))
+        log(&format!("{} : {}", field.tag, field.display_value().with_unit(&exif_data)));
     }
+
+    let orientation = get_orientation(&exif_data);
+    log(&format!("Orientation value: {}", &orientation));
 
     let image = Reader::new(Cursor::new(image_data))
         .with_guessed_format().unwrap().decode().unwrap();
