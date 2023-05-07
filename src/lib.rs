@@ -1,10 +1,10 @@
 mod utils;
 
-use std::iter::Map;
 use wasm_bindgen::prelude::*;
 use image::{GenericImageView, ImageFormat, imageops};
 use image::io::Reader;
 use std::io::Cursor;
+use exif;
 
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
 // allocator.
@@ -26,6 +26,15 @@ pub fn greet(text: &str) {
 #[wasm_bindgen]
 pub fn resize_image(image_data: Vec<u8>, resize_factor: f64) -> Vec<u8> {
     // let image = Reader::open(image_url).unwrap().decode().unwrap();
+    let image_data_copy = &image_data.clone();
+    let mut image_data_buffer = Cursor::new(image_data_copy);
+    let exif_reader = exif::Reader::new();
+    let exif_data = exif_reader.read_from_container(&mut image_data_buffer).unwrap();
+
+    for field in exif_data.fields() {
+        log(&format!("{}: {}", field.tag, field.display_value().with_unit(&exif_data)))
+    }
+
     let image = Reader::new(Cursor::new(image_data))
         .with_guessed_format().unwrap().decode().unwrap();
     let (width, height) = image.dimensions();
@@ -47,7 +56,7 @@ pub fn resize_image(image_data: Vec<u8>, resize_factor: f64) -> Vec<u8> {
     // returns pixel bytes, would need to send width x height to reconstruct using canvas
     // resized_image.into_bytes()
 
-    // With out the curson wrapping it, you get a warning about an unimplemented seek trait
+    // With out the cursor wrapping it, you get a warning about an unimplemented seek trait
     // https://stackoverflow.com/questions/53146982/how-does-one-pass-a-vect-to-a-function-when-the-trait-seek-is-required
     let mut image_data: Cursor<Vec<u8>> = Cursor::new(Vec::new());
     resized_image.write_to(&mut image_data, ImageFormat::Jpeg).unwrap();
