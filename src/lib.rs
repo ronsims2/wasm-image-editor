@@ -1,7 +1,7 @@
 mod utils;
 
 use wasm_bindgen::prelude::*;
-use image::{GenericImageView, ImageFormat, imageops};
+use image::{DynamicImage, GenericImageView, ImageFormat, imageops};
 use image::io::Reader;
 use std::io::Cursor;
 use exif;
@@ -30,7 +30,7 @@ fn get_orientation(exif_data: &Exif) -> i8 {
     match exif_data.get_field(Tag::Orientation, In::PRIMARY) {
         Some(orientation) => {
             match orientation.value.get_uint(0) {
-                Some(orientation_val@ 1...8) => {
+                Some(orientation_val@ 1..=8) => {
                     val = orientation_val as i8;
                 },
                 _ => (),
@@ -40,6 +40,29 @@ fn get_orientation(exif_data: &Exif) -> i8 {
     }
 
     return val.clone()
+}
+
+fn rotate_from_orientation(image: DynamicImage, orientation: i8) -> DynamicImage {
+    // https://magnushoff.com/articles/jpeg-orientation/
+    let mut rotated_image = match &orientation {
+        1 => image, // do noting no rotation
+        2 => image, // flipped horizontally (mirrored)
+        3 => {
+            image.rotate180()
+        }, // rotated 180 cw, fix by rotating 180 cw
+        4 => image, // rotated 180 cw & flip horizontally
+        5 => image, // rotated 90 & flip horizontally
+        6 => {
+            image.rotate90()
+        }, // rotated 270 cw, fix by rotating 90 cw
+        7 => image, // rotated 270 cw & flip horizontally
+        8 => {
+            image.rotate270()
+        }, // rotated 90 cw, fix by rotating 270 cw
+        _ => image,
+    };
+
+    rotated_image.clone()
 }
 
 #[wasm_bindgen]
@@ -59,10 +82,12 @@ pub fn resize_image(image_data: Vec<u8>, resize_factor: f64) -> Vec<u8> {
 
     let image = Reader::new(Cursor::new(image_data))
         .with_guessed_format().unwrap().decode().unwrap();
-    let (width, height) = image.dimensions();
+    let rotated_image = rotate_from_orientation(image, orientation);
+    let (width, height) = rotated_image.dimensions();
     let new_width = (width as f64 * resize_factor) as u32;
     let new_height = (height as f64 * resize_factor) as u32;
-    let resized_image = image.resize(
+
+    let resized_image = rotated_image.resize(
         new_width,
         new_height,
         imageops::Nearest);
