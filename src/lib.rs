@@ -1,7 +1,7 @@
 mod utils;
 
 use wasm_bindgen::prelude::*;
-use image::{DynamicImage, GenericImageView, ImageFormat, imageops};
+use image::{DynamicImage, GenericImageView, ImageOutputFormat, imageops};
 use image::io::Reader;
 use std::io::Cursor;
 use exif;
@@ -24,7 +24,7 @@ pub fn greet(text: &str) {
     alert(text);
 }
 
-
+// TODO: This would be a good function to expose, or expose a wrapped version that returns an object
 fn get_orientation(exif_data: &Exif) -> i8 {
     let mut val = -1;
     match exif_data.get_field(Tag::Orientation, In::PRIMARY) {
@@ -73,9 +73,10 @@ pub fn resize_image(image_data: Vec<u8>, resize_factor: f64) -> Vec<u8> {
     let exif_reader = exif::Reader::new();
     let exif_data = exif_reader.read_from_container(&mut image_data_buffer).unwrap();
 
-    for field in exif_data.fields() {
-        log(&format!("{} : {}", field.tag, field.display_value().with_unit(&exif_data)));
-    }
+    // uncomment print the exif data
+    // for field in exif_data.fields() {
+    //     log(&format!("{} : {}", field.tag, field.display_value().with_unit(&exif_data)));
+    // }
 
     let orientation = get_orientation(&exif_data);
     log(&format!("Orientation value: {}", &orientation));
@@ -106,7 +107,8 @@ pub fn resize_image(image_data: Vec<u8>, resize_factor: f64) -> Vec<u8> {
     // With out the cursor wrapping it, you get a warning about an unimplemented seek trait
     // https://stackoverflow.com/questions/53146982/how-does-one-pass-a-vect-to-a-function-when-the-trait-seek-is-required
     let mut image_data: Cursor<Vec<u8>> = Cursor::new(Vec::new());
-    resized_image.write_to(&mut image_data, ImageFormat::Jpeg).unwrap();
+    // TODO: Add param for output type and jpeg quality
+    resized_image.write_to(&mut image_data, ImageOutputFormat::Png).unwrap();
 
     image_data.into_inner()
 }
