@@ -26,25 +26,47 @@ pub fn greet(text: &str) {
 
 // TODO: This would be a good function to expose, or expose a wrapped version that returns an object
 fn get_orientation(exif_data: &Exif) -> i8 {
-    let mut val = -1;
-    match exif_data.get_field(Tag::Orientation, In::PRIMARY) {
-        Some(orientation) => {
-            match orientation.value.get_uint(0) {
-                Some(orientation_val@ 1..=8) => {
-                    val = orientation_val as i8;
-                },
-                _ => (),
-            }
-        },
-        None => (),
+    let mut val = 0;
+
+    if let orientation_field = exif_data.get_field(Tag::Orientation, In::PRIMARY) {
+        match orientation_field {
+            Some(orientation) => {
+                match orientation.value.get_uint(0) {
+                    Some(orientation_val@ 1..=8) => {
+                        val = orientation_val as i8;
+                    },
+                    _ => (),
+                }
+            },
+            None => (),
+        }
     }
 
+
     return val.clone()
+}
+
+#[wasm_bindgen]
+pub fn get_exif_data(image_data: Vec<u8>) -> Exif {
+    let mut exif_data = exif::Exif();
+    let exif_reader = exif::Reader::new();
+    let mut image_data_buffer = Cursor::new(image_data_copy);
+
+    match exif_reader.read_from_container(&mut image_data_buffer) {
+        Ok(exif_info) => {
+            exif_data = exif_info
+        },
+        Err(err) => {
+            log(&err.to_string())
+        }
+    }
+    exif_data
 }
 
 fn rotate_from_orientation(image: DynamicImage, orientation: i8) -> DynamicImage {
     // https://magnushoff.com/articles/jpeg-orientation/
     let mut rotated_image = match &orientation {
+        // zero means no orientation exists
         1 => image, // do noting no rotation
         2 => image, // flipped horizontally (mirrored)
         3 => {
@@ -71,14 +93,20 @@ pub fn resize_image(image_data: Vec<u8>, resize_factor: f64) -> Vec<u8> {
     let image_data_copy = &image_data.clone();
     let mut image_data_buffer = Cursor::new(image_data_copy);
     let exif_reader = exif::Reader::new();
-    let exif_data = exif_reader.read_from_container(&mut image_data_buffer).unwrap();
 
-    // uncomment print the exif data
-    // for field in exif_data.fields() {
-    //     log(&format!("{} : {}", field.tag, field.display_value().with_unit(&exif_data)));
-    // }
+    // by default do nothing
+    let mut orientation = 1;
 
-    let orientation = get_orientation(&exif_data);
+    match exif_reader.read_from_container(&mut image_data_buffer) {
+        Ok(exif_info) => {
+            orientation = get_orientation(&exif_info);
+        },
+        Err(err) => {
+            log(&err.to_string())
+        }
+    }
+
+
     log(&format!("Orientation value: {}", &orientation));
 
     let image = Reader::new(Cursor::new(image_data))
