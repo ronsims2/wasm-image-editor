@@ -5,7 +5,7 @@ use image::{DynamicImage, GenericImageView, ImageOutputFormat, imageops};
 use image::io::Reader;
 use std::io::Cursor;
 use exif;
-use exif::{Exif, In, Tag};
+use exif::{Exif, In, Tag, Field};
 
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
 // allocator.
@@ -46,15 +46,25 @@ fn get_orientation(exif_data: &Exif) -> i8 {
     return val.clone()
 }
 
+fn exifToList(data: &Exif) -> Vec<Vec<String>> {
+    if let exif_field = data.fields().map(|f: &Field| -> Vec<String> {
+        vec![f.tag.to_string(), f.value.clone() as String]
+    }).collect() {
+        exif_field
+    }
+
+    vec![]
+}
+
 #[wasm_bindgen]
-pub fn get_exif_data(image_data: Vec<u8>) -> Exif {
-    let mut exif_data = exif::Exif();
+pub fn get_exif_data(image_data: Vec<u8>) -> JsValue {
+    let mut exif_data = vec![];
     let exif_reader = exif::Reader::new();
-    let mut image_data_buffer = Cursor::new(image_data_copy);
+    let mut image_data_buffer = Cursor::new(image_data);
 
     match exif_reader.read_from_container(&mut image_data_buffer) {
         Ok(exif_info) => {
-            exif_data = exif_info
+            exif_data = exifToList(&exif_info)
         },
         Err(err) => {
             log(&err.to_string())
