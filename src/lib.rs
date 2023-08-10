@@ -1,6 +1,7 @@
 mod utils;
 
 use wasm_bindgen::prelude::*;
+use js_sys::Array;
 use image::{DynamicImage, GenericImageView, ImageOutputFormat, imageops};
 use image::io::Reader;
 use std::io::Cursor;
@@ -28,54 +29,52 @@ pub fn greet(text: &str) {
 fn get_orientation(exif_data: &Exif) -> i8 {
     let mut val = 0;
 
-    if let orientation_field = exif_data.get_field(Tag::Orientation, In::PRIMARY) {
-        match orientation_field {
-            Some(orientation) => {
-                match orientation.value.get_uint(0) {
-                    Some(orientation_val@ 1..=8) => {
-                        val = orientation_val as i8;
-                    },
-                    _ => (),
-                }
-            },
-            None => (),
-        }
-    }
+    let orientation_field = exif_data.get_field(Tag::Orientation, In::PRIMARY);
 
+    match orientation_field {
+        Some(orientation) => {
+            match orientation.value.get_uint(0) {
+                Some(orientation_val@ 1..=8) => {
+                    val = orientation_val as i8;
+                },
+                _ => (),
+            }
+        },
+        None => (),
+    }
 
     return val.clone()
 }
 
-fn exifToList(data: &Exif) -> Vec<Vec<String>> {
-    if let exif_field = data.fields().map(|f: &Field| -> Vec<String> {
-        vec![f.tag.to_string(), f.value.clone() as String]
-    }).collect() {
-        exif_field
-    }
-
-    vec![]
+fn exif_to_list(data: &Exif) -> JsValue {
+    let exif_fields = data.fields();
+    exif_fields.map(|f: &Field| -> JsValue {
+        // vec![f.tag.to_string(), f.value.get_string()]
+        let arr = Array::new_with_length(2);
+        arr.push(&JsValue::from(f.tag.to_string()));
+        arr.push(&JsValue::from(f.value.get_uint(0))).into()
+    }).collect::<Array>().into()
 }
 
 #[wasm_bindgen]
 pub fn get_exif_data(image_data: Vec<u8>) -> JsValue {
-    let mut exif_data = vec![];
     let exif_reader = exif::Reader::new();
     let mut image_data_buffer = Cursor::new(image_data);
 
     match exif_reader.read_from_container(&mut image_data_buffer) {
         Ok(exif_info) => {
-            exif_data = exifToList(&exif_info)
+            return exif_to_list(&exif_info);
         },
         Err(err) => {
             log(&err.to_string())
         }
     }
-    exif_data
+    js_sys::Array::new_with_length(0).into()
 }
 
 fn rotate_from_orientation(image: DynamicImage, orientation: i8) -> DynamicImage {
     // https://magnushoff.com/articles/jpeg-orientation/
-    let mut rotated_image = match &orientation {
+    let rotated_image = match &orientation {
         // zero means no orientation exists
         1 => image, // do noting no rotation
         2 => image, // flipped horizontally (mirrored)
