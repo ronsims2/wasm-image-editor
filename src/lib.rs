@@ -47,6 +47,8 @@ fn get_orientation(exif_data: &Exif) -> i8 {
 }
 
 fn exif_to_list(data: &Exif) -> Map {
+    // Object aren't yet allowed in rust wasm!
+    // https://rustwasm.github.io/wasm-bindgen/contributing/design/js-objects-in-rust.html
     let exif_fields = data.fields();
     let mut obj = Map::new();
 
