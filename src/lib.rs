@@ -50,9 +50,10 @@ fn exif_to_list(data: &Exif) -> JsValue {
     let exif_fields = data.fields();
     exif_fields.map(|f: &Field| -> JsValue {
         // vec![f.tag.to_string(), f.value.get_string()]
-        let arr = Array::new_with_length(2);
+        let arr = Array::new_with_length(0);
         arr.push(&JsValue::from(f.tag.to_string()));
-        arr.push(&JsValue::from(f.value.get_uint(0))).into()
+        arr.push(&JsValue::from(f.display_value().with_unit(data).to_string()));
+        arr.into()
     }).collect::<Array>().into()
 }
 
