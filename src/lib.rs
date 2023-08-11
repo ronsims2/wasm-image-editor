@@ -1,7 +1,7 @@
 mod utils;
 
 use wasm_bindgen::prelude::*;
-use js_sys::Array;
+use js_sys::{Map};
 use image::{DynamicImage, GenericImageView, ImageOutputFormat, imageops};
 use image::io::Reader;
 use std::io::Cursor;
@@ -46,19 +46,22 @@ fn get_orientation(exif_data: &Exif) -> i8 {
     return val.clone()
 }
 
-fn exif_to_list(data: &Exif) -> JsValue {
+fn exif_to_list(data: &Exif) -> Map {
     let exif_fields = data.fields();
-    exif_fields.map(|f: &Field| -> JsValue {
-        // vec![f.tag.to_string(), f.value.get_string()]
-        let arr = Array::new_with_length(0);
-        arr.push(&JsValue::from(f.tag.to_string()));
-        arr.push(&JsValue::from(f.display_value().with_unit(data).to_string()));
-        arr.into()
-    }).collect::<Array>().into()
+    let mut obj = Map::new();
+
+    for f in exif_fields {
+
+        obj.set(
+            &JsValue::from(f.tag.to_string()),
+            &JsValue::from(f.display_value().with_unit(data).to_string()));
+    }
+
+    obj
 }
 
 #[wasm_bindgen]
-pub fn get_exif_data(image_data: Vec<u8>) -> JsValue {
+pub fn get_exif_data(image_data: Vec<u8>) -> Map {
     let exif_reader = exif::Reader::new();
     let mut image_data_buffer = Cursor::new(image_data);
 
@@ -70,7 +73,7 @@ pub fn get_exif_data(image_data: Vec<u8>) -> JsValue {
             log(&err.to_string())
         }
     }
-    js_sys::Array::new_with_length(0).into()
+    Map::new()
 }
 
 fn rotate_from_orientation(image: DynamicImage, orientation: i8) -> DynamicImage {
